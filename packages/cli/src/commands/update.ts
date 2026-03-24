@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { REGISTRY, findPackage } from "../registry.js";
-import { getInstalledVersion, getLatestVersion, execSafe, pad } from "../utils.js";
+import { REGISTRY, findPackage } from "../../../../src/registry.js";
+import { getInstalledVersion, getLatestVersion, execSafe, pad } from "../../../../src/utils.js";
 
 interface UpdateInfo {
   name: string;

@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { dbPackages, type HasnaPackage } from "../registry.js";
+import { dbPackages, type HasnaPackage } from "../../../../src/registry.js";
 import {
   dataPath,
   dirExists,
@@ -9,7 +9,7 @@ import {
   binaryExists,
   pad,
   fileExists,
-} from "../utils.js";
+} from "../../../../src/utils.js";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 

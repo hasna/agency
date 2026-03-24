@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { mcpPackages, type HasnaPackage } from "../registry.js";
-import { binaryExists, spawnWithTimeout, pad } from "../utils.js";
+import { mcpPackages, type HasnaPackage } from "../../../../src/registry.js";
+import { binaryExists, spawnWithTimeout, pad } from "../../../../src/utils.js";
 
 interface McpCheckResult {
   name: string;

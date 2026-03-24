@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { REGISTRY, type HasnaPackage } from "../registry.js";
+import { REGISTRY, type HasnaPackage } from "../../../../src/registry.js";
 import {
   getInstalledVersion,
   dbSize,
@@ -9,7 +9,7 @@ import {
   binaryExists,
   pad,
   truncate,
-} from "../utils.js";
+} from "../../../../src/utils.js";
 
 interface StatusRow {
   name: string;

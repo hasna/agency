@@ -1,6 +1,6 @@
 import chalk from "chalk";
-import { REGISTRY, findPackage, dbPackages } from "../registry.js";
-import { execSafe, dataPath, dirExists, pad, binaryExists } from "../utils.js";
+import { REGISTRY, findPackage, dbPackages } from "../../../../src/registry.js";
+import { execSafe, dataPath, dirExists, pad, binaryExists } from "../../../../src/utils.js";
 
 export function registerSyncCommand(program: import("commander").Command): void {
   const syncCmd = program

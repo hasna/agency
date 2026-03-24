@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { existsSync, mkdirSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { HASNA_HOME, dirExists, formatBytes, execSafe, dataPath } from "../utils.js";
+import { HASNA_HOME, dirExists, formatBytes, execSafe, dataPath } from "../../../../src/utils.js";
 
 const BACKUP_DIR = join(HASNA_HOME, "backups");
 

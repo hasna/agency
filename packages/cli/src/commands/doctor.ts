@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { REGISTRY } from "../registry.js";
+import { REGISTRY } from "../../../../src/registry.js";
 import {
   HASNA_HOME,
   dirExists,
@@ -8,7 +8,7 @@ import {
   getInstalledVersion,
   getLatestVersion,
   execSafe,
-} from "../utils.js";
+} from "../../../../src/utils.js";
 
 interface Check {
   label: string;

@@ -2,8 +2,8 @@ import chalk from "chalk";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { REGISTRY } from "../registry.js";
-import { HASNA_HOME, dataPath, dirExists, execSafe } from "../utils.js";
+import { REGISTRY } from "../../../../src/registry.js";
+import { HASNA_HOME, dataPath, dirExists, execSafe } from "../../../../src/utils.js";
 
 function ask(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
