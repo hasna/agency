@@ -1,65 +1,221 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+
+interface StatusData {
+  totalServices: number;
+  servicesWithDb: number;
+  servicesWithMcp: number;
+  servicesWithHttp: number;
+  servicesWithErrors: number;
+  totalDbSize: string;
+  totalDbSizeBytes: number;
+  lastChecked: string;
+}
+
+export default function OverviewPage() {
+  const [status, setStatus] = useState<StatusData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionRunning, setActionRunning] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  async function fetchStatus() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      setStatus(data);
+    } catch {
+      // Status endpoint unavailable
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function runAction(action: string) {
+    setActionRunning(action);
+    try {
+      if (action === "sync") {
+        await fetch("/api/sync/push", { method: "POST" });
+      } else if (action === "doctor") {
+        await fetch("/api/mcp/health");
+      } else if (action === "mcp") {
+        await fetch("/api/mcp/health");
+      }
+      await fetchStatus();
+    } finally {
+      setActionRunning(null);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+        <p className="text-muted-foreground mt-1">
+          Status summary of all @hasna/* packages
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-32 rounded-xl bg-card border border-border animate-pulse"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          ))}
         </div>
-      </main>
+      ) : status ? (
+        <>
+          {/* Stats grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <StatCard
+              label="Total Services"
+              value={String(status.totalServices)}
+              sub={`${status.servicesWithDb} with DB`}
+              color="accent"
+            />
+            <StatCard
+              label="Services with Errors"
+              value={String(status.servicesWithErrors)}
+              sub="failed health checks"
+              color={status.servicesWithErrors > 0 ? "destructive" : "success"}
+            />
+            <StatCard
+              label="MCP Servers"
+              value={String(status.servicesWithMcp)}
+              sub={`${status.servicesWithHttp} with HTTP`}
+              color="accent"
+            />
+            <StatCard
+              label="Total DB Size"
+              value={status.totalDbSize}
+              sub={`across ${status.servicesWithDb} databases`}
+              color="accent"
+            />
+            <StatCard
+              label="Last Checked"
+              value={new Date(status.lastChecked).toLocaleTimeString()}
+              sub={new Date(status.lastChecked).toLocaleDateString()}
+              color="muted-foreground"
+            />
+            <StatCard
+              label="HTTP Servers"
+              value={String(status.servicesWithHttp)}
+              sub="REST API endpoints"
+              color="accent"
+            />
+          </div>
+
+          {/* Quick actions */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
+            <div className="flex flex-wrap gap-3">
+              <ActionButton
+                label="Sync All"
+                onClick={() => runAction("sync")}
+                loading={actionRunning === "sync"}
+              />
+              <ActionButton
+                label="Run Doctor"
+                onClick={() => runAction("doctor")}
+                loading={actionRunning === "doctor"}
+              />
+              <ActionButton
+                label="Check MCPs"
+                onClick={() => runAction("mcp")}
+                loading={actionRunning === "mcp"}
+              />
+              <ActionButton
+                label="Refresh"
+                onClick={fetchStatus}
+                loading={loading}
+                variant="secondary"
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-xl bg-card border border-border p-8 text-center">
+          <p className="text-muted-foreground">
+            Could not load status. Make sure the API is running.
+          </p>
+          <button
+            onClick={fetchStatus}
+            className="mt-4 px-4 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent/90 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+}) {
+  const colorMap: Record<string, string> = {
+    accent: "text-accent",
+    destructive: "text-destructive",
+    success: "text-success",
+    warning: "text-warning",
+    "muted-foreground": "text-muted-foreground",
+  };
+
+  return (
+    <div className="rounded-xl bg-card border border-border p-5">
+      <div className="text-sm text-muted-foreground mb-2">{label}</div>
+      <div className={`text-3xl font-bold ${colorMap[color] || "text-foreground"}`}>
+        {value}
+      </div>
+      <div className="text-xs text-muted-foreground mt-1">{sub}</div>
+    </div>
+  );
+}
+
+function ActionButton({
+  label,
+  onClick,
+  loading,
+  variant = "primary",
+}: {
+  label: string;
+  onClick: () => void;
+  loading: boolean;
+  variant?: "primary" | "secondary";
+}) {
+  const base =
+    variant === "primary"
+      ? "bg-accent text-white hover:bg-accent/90"
+      : "bg-muted text-foreground hover:bg-muted/80";
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${base}`}
+    >
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          Running...
+        </span>
+      ) : (
+        label
+      )}
+    </button>
   );
 }
