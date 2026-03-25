@@ -691,10 +691,110 @@ function writeIfMissing(filePath: string, content: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Setup tasks from builtin template
+// ---------------------------------------------------------------------------
+
+interface TemplateInfo {
+  id: string;
+  name: string;
+  title_pattern: string;
+}
+
+interface ProjectInfo {
+  id: string;
+  name: string;
+  path: string;
+}
+
+/**
+ * Create setup tasks for a new project using the open-source-project builtin template.
+ * 1. Ensures builtin templates are initialized
+ * 2. Creates a todos project for the new service
+ * 3. Finds the open-source-project template
+ * 4. Creates all ~16 tasks with dependencies from the template
+ */
+function createSetupTasks(name: string, dir: string): void {
+  console.log(chalk.dim("  Creating setup tasks from template..."));
+
+  // Step 1: Ensure builtin templates exist
+  const initResult = execSafe(
+    `bun -e "const { initBuiltinTemplates } = require('@hasna/todos'); initBuiltinTemplates(); console.log('ok');" 2>/dev/null`,
+    15_000,
+  );
+  if (initResult !== null && initResult.includes("ok")) {
+    console.log(chalk.dim("  Builtin templates initialized."));
+  }
+
+  // Step 2: Create a todos project for this service
+  const projectResult = execSafe(
+    `todos --json projects --add "${dir}" --name "${name}" 2>/dev/null`,
+    15_000,
+  );
+  let projectId: string | null = null;
+  if (projectResult !== null) {
+    try {
+      const project: ProjectInfo = JSON.parse(projectResult);
+      projectId = project.id;
+      console.log(chalk.dim(`  Todos project created: ${project.name} (${project.id.slice(0, 8)})`));
+    } catch {
+      console.log(chalk.yellow("  Could not parse todos project output."));
+    }
+  } else {
+    console.log(chalk.yellow("  todos CLI not available — skipping setup tasks."));
+    return;
+  }
+
+  if (!projectId) {
+    console.log(chalk.yellow("  Could not create todos project — skipping setup tasks."));
+    return;
+  }
+
+  // Step 3: Find the open-source-project template
+  const templatesResult = execSafe(`todos --json templates 2>/dev/null`, 15_000);
+  let templateId: string | null = null;
+  if (templatesResult !== null) {
+    try {
+      const templates: TemplateInfo[] = JSON.parse(templatesResult);
+      const osTemplate = templates.find((t) => t.name === "open-source-project");
+      if (osTemplate) {
+        templateId = osTemplate.id;
+      }
+    } catch {
+      // parse error
+    }
+  }
+
+  if (!templateId) {
+    console.log(chalk.yellow("  open-source-project template not found — skipping setup tasks."));
+    return;
+  }
+
+  // Step 4: Create tasks from template via direct library call
+  // The todos CLI templates --use only supports single-task templates,
+  // so we use a direct library call for multi-task template instantiation.
+  const escapedName = name.replace(/'/g, "\\'");
+  const tasksResult = execSafe(
+    `bun -e "const { tasksFromTemplate } = require('@hasna/todos'); const tasks = tasksFromTemplate('${templateId}', '${projectId}', { name: '${escapedName}', org: 'hasna' }); console.log(JSON.stringify({ count: tasks.length }));" 2>/dev/null`,
+    15_000,
+  );
+
+  if (tasksResult !== null) {
+    try {
+      const result = JSON.parse(tasksResult);
+      console.log(chalk.green(`  Created ${result.count} setup tasks from open-source-project template.`));
+    } catch {
+      console.log(chalk.yellow("  Tasks may have been created (could not parse output)."));
+    }
+  } else {
+    console.log(chalk.yellow("  Could not create tasks from template — run manually."));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scaffold functions
 // ---------------------------------------------------------------------------
 
-function scaffoldService(name: string, baseDir: string): void {
+function scaffoldService(name: string, baseDir: string, skipTasks: boolean): void {
   const dir = join(baseDir, `open-${name}`);
   console.log(chalk.bold(`\nagency new service ${name}\n`));
 
@@ -790,6 +890,13 @@ function scaffoldService(name: string, baseDir: string): void {
     console.log(chalk.yellow("  Build failed — publish manually."));
   }
 
+  // 8. Create setup tasks from template
+  if (!skipTasks) {
+    createSetupTasks(name, dir);
+  } else {
+    console.log(chalk.dim("  Skipping setup tasks (--skip-tasks)."));
+  }
+
   console.log(chalk.bold.green(`\n  open-${name} scaffolded successfully.\n`));
   console.log(chalk.dim(`  Directory: ${dir}`));
   console.log(chalk.dim(`  Package:   @hasna/${name}`));
@@ -798,7 +905,7 @@ function scaffoldService(name: string, baseDir: string): void {
   console.log(chalk.dim(`  Server:    ${name}-serve`));
 }
 
-function scaffoldLibrary(name: string, baseDir: string): void {
+function scaffoldLibrary(name: string, baseDir: string, skipTasks: boolean): void {
   const dir = join(baseDir, `open-${name}`);
   console.log(chalk.bold(`\nagency new library ${name}\n`));
 
@@ -868,6 +975,13 @@ function scaffoldLibrary(name: string, baseDir: string): void {
     console.log(chalk.yellow("  Build failed — publish manually."));
   }
 
+  // 7. Create setup tasks from template
+  if (!skipTasks) {
+    createSetupTasks(name, dir);
+  } else {
+    console.log(chalk.dim("  Skipping setup tasks (--skip-tasks)."));
+  }
+
   console.log(chalk.bold.green(`\n  open-${name} scaffolded successfully.\n`));
   console.log(chalk.dim(`  Directory: ${dir}`));
   console.log(chalk.dim(`  Package:   @hasna/${name}`));
@@ -886,17 +1000,19 @@ export function registerNewCommand(program: import("commander").Command): void {
     .command("service <name>")
     .description("Create a new service with CLI, MCP server, HTTP server, and database")
     .option("-d, --dir <path>", "Base directory for the new project", process.cwd())
-    .action((name: string, opts: { dir: string }) => {
+    .option("--skip-tasks", "Skip creating setup tasks from the open-source-project template")
+    .action((name: string, opts: { dir: string; skipTasks?: boolean }) => {
       const baseDir = resolve(opts.dir);
-      scaffoldService(name, baseDir);
+      scaffoldService(name, baseDir, !!opts.skipTasks);
     });
 
   newCmd
     .command("library <name>")
     .description("Create a new library package (no DB, MCP, CLI, or server)")
     .option("-d, --dir <path>", "Base directory for the new project", process.cwd())
-    .action((name: string, opts: { dir: string }) => {
+    .option("--skip-tasks", "Skip creating setup tasks from the open-source-project template")
+    .action((name: string, opts: { dir: string; skipTasks?: boolean }) => {
       const baseDir = resolve(opts.dir);
-      scaffoldLibrary(name, baseDir);
+      scaffoldLibrary(name, baseDir, !!opts.skipTasks);
     });
 }
