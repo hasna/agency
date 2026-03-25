@@ -78,12 +78,32 @@ export function execSafe(cmd: string, timeoutMs = 10_000): string | null {
   }
 }
 
-/** Get globally installed version of an npm package */
+/** Get globally installed version of an npm package (sync) */
 export function getInstalledVersion(npmName: string): string | null {
   const result = execSafe(`npm ls -g ${npmName} --depth=0 --json 2>/dev/null`);
   if (!result) return null;
   try {
     const parsed = JSON.parse(result);
+    const deps = parsed.dependencies || {};
+    const key = Object.keys(deps).find((k) => k === npmName);
+    return key ? deps[key].version || null : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Get globally installed version of an npm package (async, with short timeout) */
+export async function getInstalledVersionAsync(
+  npmName: string,
+): Promise<string | null> {
+  const { stdout } = await spawnWithTimeout(
+    "npm",
+    ["ls", "-g", npmName, "--depth=0", "--json"],
+    5_000,
+  );
+  if (!stdout) return null;
+  try {
+    const parsed = JSON.parse(stdout);
     const deps = parsed.dependencies || {};
     const key = Object.keys(deps).find((k) => k === npmName);
     return key ? deps[key].version || null : null;
