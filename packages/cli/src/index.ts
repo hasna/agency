@@ -14,6 +14,8 @@ import { registerPlaygroundCommand } from "./commands/playground.js";
 import { registerLogsCommand } from "./commands/logs.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { registerExportCommand } from "./commands/export.js";
+import { registerNewCommand } from "./commands/new.js";
+import { registerReleaseCommand } from "./commands/release.js";
 import { PACKAGE_COUNT } from "../../../src/registry.js";
 
 const program = new Command();
@@ -36,5 +38,7 @@ registerPlaygroundCommand(program);
 registerLogsCommand(program);
 registerSearchCommand(program);
 registerExportCommand(program);
+registerNewCommand(program);
+registerReleaseCommand(program);
 
 program.parse();
