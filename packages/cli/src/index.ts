@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander";
+import { createRequire } from "node:module";
 import { registerStatusCommand } from "./commands/status.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerInitCommand } from "./commands/init.js";
@@ -18,12 +19,13 @@ import { registerNewCommand } from "./commands/new.js";
 import { registerReleaseCommand } from "./commands/release.js";
 import { PACKAGE_COUNT } from "../../../src/registry.js";
 
+const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
 const program = new Command();
 
 program
   .name("agency")
   .description(`Unified management CLI for all ${PACKAGE_COUNT} @hasna/* open-source packages`)
-  .version("0.2.0");
+  .version(pkg.version);
 
 registerStatusCommand(program);
 registerDoctorCommand(program);

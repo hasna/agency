@@ -7,7 +7,7 @@
     },
     "packages/cli": {
       "name": "@hasna/agency",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "bin": {
         "agency": "dist/index.js",
       },
